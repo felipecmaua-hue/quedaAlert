@@ -1,0 +1,24 @@
+name: Build IPA
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: xcodegen generate
+      - name: Compilar sem assinatura
+        run: |
+          xcodebuild -project QuedaAlert.xcodeproj -scheme QuedaAlert \
+            -configuration Release -sdk iphoneos -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/QuedaAlert.app Payload/
+          zip -r QuedaAlert.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QuedaAlert-ipa
+          path: QuedaAlert.ipa
