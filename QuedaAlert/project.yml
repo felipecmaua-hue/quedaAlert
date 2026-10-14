@@ -1,0 +1,25 @@
+name: QuedaAlert
+options:
+  bundleIdPrefix: com.queda
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  QuedaAlert:
+    type: application
+    platform: iOS
+    sources: [QuedaAlert]
+    info:
+      path: QuedaAlert/Info.plist
+      properties:
+        CFBundleDisplayName: Queda Alert
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        NSBluetoothAlwaysUsageDescription: "O Queda Alert usa o Bluetooth para receber o aviso QUEDA do seu micro:bit."
+        UIBackgroundModes: [bluetooth-central]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.queda.alert
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        CODE_SIGNING_ALLOWED: "NO"
