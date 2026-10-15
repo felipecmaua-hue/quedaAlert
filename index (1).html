@@ -25,7 +25,7 @@
 
 <script>
 const UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-const UART_TX      = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // micro:bit -> celular
+const UART_TX      = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
 
 const statusEl = document.getElementById("status");
 const alertaEl = document.getElementById("alerta");
@@ -42,9 +42,7 @@ async function prepararNotificacoes() {
     if ("Notification" in window) {
       await Notification.requestPermission();
     }
-  } catch (e) {
-    // não deixa um problema de notificação travar a conexão Bluetooth
-  }
+  } catch (e) {}
 }
 
 function lerNumero() {
@@ -86,7 +84,7 @@ async function conectar() {
     etapa = "2: conectando (GATT)";
     statusEl.textContent = "Etapa " + etapa;
     const servidor = await dispositivo.gatt.connect();
-    await esperar(1500); // o Android precisa de um tempo para listar os serviços
+    await esperar(1500);
 
     etapa = "3: achando o serviço UART";
     statusEl.textContent = "Etapa " + etapa;
@@ -95,7 +93,7 @@ async function conectar() {
       servico = await servidor.getPrimaryService(UART_SERVICE);
     } catch (e) {
       await esperar(1500);
-      servico = await servidor.getPrimaryService(UART_SERVICE); // 2ª tentativa
+      servico = await servidor.getPrimaryService(UART_SERVICE);
     }
 
     etapa = "4: achando a característica TX";
