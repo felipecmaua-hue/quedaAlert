@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Queda Alert</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 24px; background: #f4f4f4; }
+  button { font-size: 20px; padding: 16px 28px; border: 0; border-radius: 12px; background: #1565c0; color: #fff; margin: 8px; }
+  #status { font-size: 18px; margin: 20px 0; }
+  #alerta { display: none; background: #c62828; color: #fff; font-size: 28px; padding: 24px; border-radius: 12px; }
+</style>
+</head>
+<body>
+  <h1>Queda Alert</h1>
+  <p id="status">Desconectado</p>
+  <button id="conectar">Conectar ao micro:bit</button>
+  <button id="testar">Simular queda</button>
+  <p><input id="numero" type="tel" placeholder="Telefone de confiança (ex: 11999998888)" style="font-size:18px;padding:10px;width:80%"></p>
+  <button id="salvar">Salvar contato</button>
+  <div id="alerta">
+    ⚠️ QUEDA DETECTADA!<br>
+    <a id="ligar" href="#" style="display:inline-block;margin-top:16px;padding:16px 28px;background:#fff;color:#c62828;border-radius:12px;text-decoration:none;font-size:22px">📞 Ligar agora</a>
+  </div>
+
+<script>
+// UUIDs do serviço UART Bluetooth do micro:bit (são fixos)
+const UART_SERVICE = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const UART_TX      = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; // micro:bit -> celular
+
+const statusEl = document.getElementById("status");
+const alertaEl = document.getElementById("alerta");
+let registro = null; // service worker, necessário para notificação no Android
+
+// Registra o service worker (arquivo sw.js) e pede permissão de notificação
+async function prepararNotificacoes() {
+  if ("serviceWorker" in navigator) {
+    registro = await navigator.serviceWorker.register("sw.js");
+    await navigator.serviceWorker.ready;
+  }
+  if ("Notification" in window) {
+    await Notification.requestPermission();
+  }
+}
+
+// Mostra o alerta: notificação, vibração e aviso vermelho na tela
+function lerNumero() {
+  try { return localStorage.getItem("contato") || ""; } catch (e) { return ""; }
+}
+
+function avisarQueda() {
+  alertaEl.style.display = "block";
+  const numero = lerNumero();
+  if (numero) document.getElementById("ligar").href = "tel:" + numero;
+  if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+  if (registro && Notification.permission === "granted") {
+    registro.showNotification("⚠️ Queda detectada", {
+      body: "Uma queda foi detectada. Verifique se está tudo bem.",
+      vibrate: [500, 200, 500],
+      requireInteraction: true
+    });
+  }
+}
+
+// Conecta no micro:bit e fica ouvindo as mensagens
+async function conectar() {
+  try {
+    await prepararNotificacoes();
+    statusEl.textContent = "Procurando micro:bit...";
+
+    const dispositivo = await navigator.bluetooth.requestDevice({
+      filters: [{ namePrefix: "BBC micro:bit" }],
+      optionalServices: [UART_SERVICE]
+    });
+
+    dispositivo.addEventListener("gattserverdisconnected", () => {
+      statusEl.textContent = "Desconectado. Toque em Conectar de novo.";
+    });
+
+    const servidor = await dispositivo.gatt.connect();
+    const servico = await servidor.getPrimaryService(UART_SERVICE);
+    const tx = await servico.getCharacteristic(UART_TX);
+
+    await tx.startNotifications();
+    tx.addEventListener("characteristicvaluechanged", (evento) => {
+      const texto = new TextDecoder().decode(evento.target.value).trim();
+      statusEl.textContent = "Recebido: " + texto;
+      if (texto.toUpperCase().includes("QUEDA")) avisarQueda();
+    });
+
+    statusEl.textContent = "Conectado a " + dispositivo.name;
+  } catch (erro) {
+    statusEl.textContent = "Erro: " + erro.message;
+  }
+}
+
+// Contato de confiança: fica salvo no próprio celular
+const campoNumero = document.getElementById("numero");
+campoNumero.value = lerNumero();
+document.getElementById("salvar").addEventListener("click", () => {
+  const limpo = campoNumero.value.replace(/[^0-9+]/g, "");
+  try { localStorage.setItem("contato", limpo); } catch (e) {}
+  statusEl.textContent = limpo ? "Contato salvo: " + limpo : "Digite um número";
+});
+
+document.getElementById("conectar").addEventListener("click", conectar);
+document.getElementById("testar").addEventListener("click", async () => {
+  await prepararNotificacoes();
+  avisarQueda();
+});
+</script>
+</body>
+</html>
